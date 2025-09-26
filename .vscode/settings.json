@@ -1,0 +1,46 @@
+{
+  // ✅ ปิด ESLint สำหรับโปรเจกต์นี้
+  "eslint.enable": false,
+
+  // 📝 จัดการ Format Code
+  "editor.formatOnSave": true, // จัดโค้ดอัตโนมัติทุกครั้งที่ Save
+  "editor.defaultFormatter": "esbenp.prettier-vscode", // ใช้ Prettier เป็นตัวจัด format
+
+  // 🔍 การตั้งค่าเกี่ยวกับโค้ด
+  "files.autoSave": "onFocusChange", // บันทึกไฟล์อัตโนมัติเมื่อสลับโฟกัส
+  "files.trimTrailingWhitespace": true, // ลบช่องว่างท้ายบรรทัด
+  "files.insertFinalNewline": true, // บังคับให้มี newline ท้ายไฟล์เสมอ
+  "files.exclude": {
+    // ซ่อนโฟลเดอร์/ไฟล์ที่ไม่จำเป็น
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true
+  },
+
+  // 🌐 Terminal & Shell
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.defaultProfile.osx": "zsh",
+
+  // 📦 TypeScript / JavaScript
+  "javascript.updateImportsOnFileMove.enabled": "always", // ปรับ import อัตโนมัติถ้าย้ายไฟล์
+  "typescript.updateImportsOnFileMove.enabled": "always",
+
+  // 🖋 UI & Editor
+  "editor.tabSize": 2, // ใช้ 2 spaces ต่อ 1 tab
+  "editor.detectIndentation": false,
+  "editor.wordWrap": "on", // ตัดบรรทัดอัตโนมัติ
+  "editor.minimap.enabled": false, // ปิด minimap ด้านข้าง
+  "workbench.startupEditor": "none", // เปิด VS Code โดยไม่ต้องแสดง Welcome Page
+
+  // 🧹 Suggestion / IntelliSense
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  "editor.suggestSelection": "first",
+  "[prisma]": {
+    "editor.defaultFormatter": "Prisma.prisma"
+  }
+}

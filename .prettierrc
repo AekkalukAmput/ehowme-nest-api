@@ -1,0 +1,7 @@
+{
+  "singleQuote": true,
+  "trailingComma": "all",
+  "rules": {
+    "@typescript-eslint/no-unsafe-assignment": "error"
+  }
+}
