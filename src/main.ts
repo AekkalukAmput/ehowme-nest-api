@@ -22,12 +22,15 @@ async function bootstrap() {
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       'refresh-token',
     )
+    .addServer('/api', 'Dev via Angular proxy')
     .build();
 
   const doc = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, doc);
   // ให้ Nest ส่งสัญญาณ lifecycle ตอนปิดแอป
   app.enableShutdownHooks();
+
+  app.enableCors({ origin: 'http://localhost:4200', credentials: true });
 
   const port = Number(process.env.PORT ?? 3001);
   const host = process.env.HOST ?? '127.0.0.1';
