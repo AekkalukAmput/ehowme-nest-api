@@ -8,7 +8,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.use(cookieParser());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-
+  app.setGlobalPrefix('api', { exclude: ['docs', 'docs-json'] });
   const config = new DocumentBuilder()
     .setTitle('Auth API (NestJS + Prisma)')
     .setDescription('JWT Access/Refresh with rotation, Swagger docs')

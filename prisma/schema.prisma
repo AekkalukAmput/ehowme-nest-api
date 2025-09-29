@@ -14,12 +14,61 @@ datasource db {
 }
 
 model User {
-  id               String   @id @default(uuid()) @db.Uuid
-  email            String   @unique @db.VarChar(150)
-  passwordHash     String   @db.VarChar(150)
-  refreshTokenHash String?  @db.Text
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id               String            @id @default(uuid()) @db.Uuid
+  email            String            @unique @db.VarChar(150)
+  passwordHash     String            @db.VarChar(150)
+  refreshTokenHash String?           @db.Text
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  expenseEvent     ExpenseEvent[]
+  expenseCategory  ExpenseCategory[]
 
   @@map("users")
+}
+
+enum ExpenseType {
+  INCOME
+  EXPENSE
+}
+
+model ExpenseEvent {
+  id                String           @id @default(uuid()) @db.Uuid
+  userId            String           @db.Uuid
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date              DateTime // เก็บที่ 00:00:00Z ของวันนั้น
+  type              ExpenseType
+  amount            Decimal          @db.Decimal(14, 2)
+  category          String?          @db.VarChar(100)
+  note              String?          @db.Text
+  expenseCategory   ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
+  expenseCategoryId String?          @db.Uuid
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([userId, date])
+  @@map("expense_events")
+}
+
+model ExpenseCategory {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @db.Uuid
+  type      ExpenseType
+  name      String      @db.VarChar(120)
+  parentId  String?     @db.Uuid
+  sortOrder Int         @default(0)
+  isActive  Boolean     @default(true)
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   ExpenseCategory?  @relation("CategoryToParent", fields: [parentId], references: [id])
+  children ExpenseCategory[] @relation("CategoryToParent")
+
+  // ความสัมพันธ์จากรายการค่าใช้จ่าย
+  expenseEvents ExpenseEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, type, parentId])
+  // NOTE: Postgres อนุญาต null หลายตัวใน unique; บังคับเอกลักษณ์ sibling ผ่านโค้ด service
+  @@map("expense_categories")
 }
