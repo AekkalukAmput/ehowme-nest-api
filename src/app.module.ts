@@ -7,6 +7,8 @@ import { ExpenseModule } from './expense/expense.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 import { CategoriesModule } from './categories/categories.module';
+import { ExpenseItemModule } from './expense-item/expense-item.module';
+import { DocumentsModule } from './documents/documents.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { CategoriesModule } from './categories/categories.module';
     PrismaModule,
     ExpenseModule,
     CategoriesModule,
+    ExpenseItemModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

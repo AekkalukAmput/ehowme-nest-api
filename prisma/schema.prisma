@@ -22,6 +22,7 @@ model User {
   updatedAt        DateTime          @updatedAt
   expenseEvent     ExpenseEvent[]
   expenseCategory  ExpenseCategory[]
+  documents        Document[]
 
   @@map("users")
 }
@@ -31,44 +32,135 @@ enum ExpenseType {
   EXPENSE
 }
 
-model ExpenseEvent {
-  id                String           @id @default(uuid()) @db.Uuid
-  userId            String           @db.Uuid
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date              DateTime // เก็บที่ 00:00:00Z ของวันนั้น
-  type              ExpenseType
-  amount            Decimal          @db.Decimal(14, 2)
-  category          String?          @db.VarChar(100)
-  note              String?          @db.Text
-  expenseCategory   ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
-  expenseCategoryId String?          @db.Uuid
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+enum CustomerType {
+  INDIVIDUAL
+  BUSINESS
+}
 
-  @@index([userId, date])
+enum FileStorageProvider {
+  LOCAL
+  S3
+}
+
+enum DocumentType {
+  RECEIPT // ใบเสร็จ
+  INVOICE // ใบแจ้งหนี้
+  IMAGE
+  PDF
+  OTHER
+}
+
+enum DocumentSource {
+  EXPENSE_EVENT
+  // ขยายเพิ่มได้ เช่น USER, PROJECT, ...
+}
+
+model ExpenseEvent {
+  id                    String           @id @default(uuid()) @db.Uuid
+  seq                   Int
+  userId                String           @db.Uuid
+  user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startProjectDate      DateTime // เก็บที่ 00:00:00Z ของวันนั้น
+  type                  ExpenseType
+  amount                Decimal          @db.Decimal(14, 2)
+  category              String           @db.VarChar(100)
+  note                  String?          @db.Text
+  expenseCategory       ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
+  expenseCategoryId     String?          @db.Uuid
+  orderNo               String           @db.VarChar(50)
+  websiteName           String           @db.VarChar(200)
+  address               String?          @db.VarChar(200)
+  telNo                 String?          @db.VarChar(12)
+  customerType          CustomerType     @default(INDIVIDUAL)
+  withholdingTaxPercent Int              @default(3)
+  withholdingTaxAmount  Decimal          @default(0) @db.Decimal(14, 2)
+  serviceFeePercent     Int              @default(10)
+  serviceFeeAmount      Decimal          @default(0) @db.Decimal(14, 2)
+  expenseItems          ExpenseItem[]    @relation("EventToItems")
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@unique([userId, seq])
+  @@index([userId, startProjectDate])
   @@map("expense_events")
 }
 
-model ExpenseCategory {
-  id        String      @id @default(uuid()) @db.Uuid
-  userId    String      @db.Uuid
-  type      ExpenseType
-  name      String      @db.VarChar(120)
-  parentId  String?     @db.Uuid
-  sortOrder Int         @default(0)
-  isActive  Boolean     @default(true)
+model ExpenseItem {
+  id        String       @id @default(uuid()) @db.Uuid
+  eventId   String       @db.Uuid
+  event     ExpenseEvent @relation("EventToItems", fields: [eventId], references: [id], onDelete: Cascade)
+  name      String       @db.VarChar(200)
+  amount    Decimal      @default(0) @db.Decimal(14, 2)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
-  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent   ExpenseCategory?  @relation("CategoryToParent", fields: [parentId], references: [id])
-  children ExpenseCategory[] @relation("CategoryToParent")
+  @@index([eventId])
+  @@map("expense_items")
+}
 
-  // ความสัมพันธ์จากรายการค่าใช้จ่าย
-  expenseEvents ExpenseEvent[]
-
-  createdAt DateTime @default(now())
+model ExpenseEventCounter {
+  // เคาน์เตอร์ต่อผู้ใช้, เก็บค่า seq ล่าสุด
+  userId    String   @id @db.Uuid
+  lastSeq   Int      @default(0)
   updatedAt DateTime @updatedAt
+
+  @@map("expense_event_counters")
+}
+
+model ExpenseCategory {
+  id            String            @id @default(uuid()) @db.Uuid
+  userId        String            @db.Uuid
+  type          ExpenseType
+  name          String            @db.VarChar(120)
+  parentId      String?           @db.Uuid
+  sortOrder     Int               @default(0)
+  isActive      Boolean           @default(true)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent        ExpenseCategory?  @relation("CategoryToParent", fields: [parentId], references: [id])
+  children      ExpenseCategory[] @relation("CategoryToParent")
+  expenseEvents ExpenseEvent[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   @@index([userId, type, parentId])
   // NOTE: Postgres อนุญาต null หลายตัวใน unique; บังคับเอกลักษณ์ sibling ผ่านโค้ด service
   @@map("expense_categories")
+}
+
+model Document {
+  id             String              @id @default(uuid()) @db.Uuid
+  userId         String              @db.Uuid
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  originalName   String              @db.VarChar(255)
+  mimeType       String              @db.VarChar(150)
+  byteSize       Int
+  ext            String?             @db.VarChar(20)
+  checksumSha256 String?             @db.VarChar(64)
+  type           DocumentType        @default(OTHER)
+  storage        FileStorageProvider @default(LOCAL)
+  bucket         String?             @db.VarChar(100)
+  key            String              @db.VarChar(500) // path/object key จริงที่เก็บ
+  url            String?             @db.Text // ถ้า public ค่อยใส่
+  metadata       Json?
+  createdAt      DateTime            @default(now())
+  deletedAt      DateTime?
+  links          DocumentLink[]
+
+  @@index([userId])
+  @@index([storage, bucket, key])
+  @@map("documents")
+}
+
+model DocumentLink {
+  id         String         @id @default(uuid()) @db.Uuid
+  documentId String         @db.Uuid
+  document   Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  sourceType DocumentSource
+  sourceId   String         @db.Uuid
+  createdAt  DateTime       @default(now())
+
+  // หนึ่งเอกสารลิงก์ไปที่ entity เดิมซ้ำ ๆ ไม่ได้
+  @@unique([documentId, sourceType, sourceId])
+  @@index([sourceType, sourceId])
+  @@map("document_links")
 }
